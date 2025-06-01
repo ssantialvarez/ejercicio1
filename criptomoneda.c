@@ -3,6 +3,7 @@
 #include <string.h>
 #include "criptomoneda.h"
 
+
 /*
 typedef struct {
     double      precio;

@@ -13,10 +13,16 @@ typedef struct {
     double      cantidad;       // Amount of money involved in the transaction
 } tTransaccionDinero;
 
+int ejecuta_transaccion_dinero(
+                            tTransaccionDinero* t, 
+                            tUsuario* usuarios, 
+                            tCriptomoneda* criptomonedas, 
+                            int num_usuarios, 
+                            int num_criptomonedas, 
+                            sem_t *mutex, 
+                            sem_t *console_mutex);
 
-
-
-
+int leer_archivo_transaccion(const char* nombre_archivo, tTransaccionDinero* transacciones, int* num_transacciones);
 
 
 #endif // TRANSACCION_H_INCLUDED

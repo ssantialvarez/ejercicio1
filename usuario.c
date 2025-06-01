@@ -1,7 +1,7 @@
-#include <stdio.h>
 #include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
 #include "usuario.h"
-
 
 void leer_usuarios_csv(const char *nombre_archivo, tUsuario *usuarios, int* num_usuarios) {
     // Esta función lee un archivo CSV y llena el vector de usuarios
