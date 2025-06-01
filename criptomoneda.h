@@ -11,8 +11,8 @@ typedef struct {
     double      cambio_24h;
 } tCriptomoneda;
 
-void leer_criptomonedas_csv(const char *nombre_archivo, tLista *criptomonedas);
-int escribir_criptomonedas_csv(const char *nombre_archivo, tLista *criptomonedas);
+int leer_criptomonedas_csv(const char *nombre_archivo, tCriptomoneda *criptomonedas, int *num_criptomonedas);
+int escribir_criptomonedas_csv(const char *nombre_archivo, tCriptomoneda *criptomonedas, int *num_criptomonedas);
 
 
 

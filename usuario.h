@@ -10,8 +10,8 @@ typedef struct {
 } tUsuario;
 
 // function to read usuarios.csv
-void leer_usuarios_csv(const char *nombre_archivo, tLista *usuarios);
-int escribir_usuarios_csv(const char *nombre_archivo, tLista *usuarios);
+void leer_usuarios_csv(const char *nombre_archivo, tUsuario *usuarios, int* num_usuarios);
+int escribir_usuarios_csv(const char *nombre_archivo, tUsuario *usuarios, int num_usuarios);
 
 
 #endif // USUARIO_H_INCLUDED

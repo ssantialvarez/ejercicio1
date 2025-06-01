@@ -1,54 +1,50 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include "listas.h"
 #include "usuario.h"
 
 
-void leer_usuarios_csv(const char *nombre_archivo, tLista *usuarios) {
+void leer_usuarios_csv(const char *nombre_archivo, tUsuario *usuarios, int* num_usuarios) {
+    // Esta función lee un archivo CSV y llena el vector de usuarios
     FILE *archivo = fopen(nombre_archivo, "r");
-    tUsuario nuevo_usuario;
     if (!archivo) {
         perror("Error al abrir el archivo");
         exit(EXIT_FAILURE);
     }
-
     char linea[256];
-    
-
+    *num_usuarios = 0;
     while (fgets(linea, sizeof(linea), archivo)) {
+        // Eliminar el salto de línea al final de la línea
+        linea[strcspn(linea, "\n")] = 0; // Eliminar el salto de línea
+        // Parsear la línea
         sscanf(linea, "%49[^,],%d,%49[^,],%lf",
-               nuevo_usuario.nombre,
-               &nuevo_usuario.num_cuenta_banco,
-               nuevo_usuario.banco,
-               &nuevo_usuario.saldo);
-        insertarUltimo(usuarios, sizeof(tUsuario), &nuevo_usuario);
+               usuarios[*num_usuarios].nombre,
+               &usuarios[*num_usuarios].num_cuenta_banco,
+               usuarios[*num_usuarios].banco,
+               &usuarios[*num_usuarios].saldo);
+        (*num_usuarios)++;
     }
-
-    fclose(archivo);
 }
 
-int escribir_usuarios_csv(const char *nombre_archivo, tLista *usuarios) {
+int escribir_usuarios_csv(const char *nombre_archivo, tUsuario *usuarios, int num_usuarios) {
+    // Esta función escribe el vector de usuarios en un archivo CSV
     FILE *archivo = fopen(nombre_archivo, "w");
-    tUsuario nuevo_usuario;
     if (!archivo) {
         perror("Error al abrir el archivo para escritura");
         return -1;
     }
-    while(!listaVacia(usuarios)) {
-        sacarPrimero(usuarios, sizeof(tUsuario), &nuevo_usuario);
-        printf("Escribiendo usuario: %s, Cuenta: %d, Banco: %s, Saldo: %.2f\n",
-               nuevo_usuario.nombre,
-               nuevo_usuario.num_cuenta_banco,
-               nuevo_usuario.banco,
-               nuevo_usuario.saldo);
-        // Escribir en el archivo CSV
+    for (int i = 0; i < num_usuarios; i++) {
         fprintf(archivo, "%s,%d,%s,%.2f\n",
-                nuevo_usuario.nombre,
-                nuevo_usuario.num_cuenta_banco,
-                nuevo_usuario.banco,
-                nuevo_usuario.saldo);
+                usuarios[i].nombre,
+                usuarios[i].num_cuenta_banco,
+                usuarios[i].banco,
+                usuarios[i].saldo);
+        printf("Usuario %d: %s, Cuenta: %d, Banco: %s, Saldo: %.2f\n",
+               i + 1,
+               usuarios[i].nombre,
+               usuarios[i].num_cuenta_banco,
+               usuarios[i].banco,
+               usuarios[i].saldo);
     }
-
     fclose(archivo);
     return 0;
 }

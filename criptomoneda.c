@@ -1,7 +1,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include "listas.h"
 #include "criptomoneda.h"
 
 /*
@@ -15,57 +14,59 @@ typedef struct {
 } tCriptomoneda;
 */
 
-void leer_criptomonedas_csv(const char *nombre_archivo, tLista *criptomonedas) {
+int leer_criptomonedas_csv(const char *nombre_archivo, tCriptomoneda *criptomonedas, int *num_criptomonedas) {
     FILE *archivo = fopen(nombre_archivo, "r");
-    tCriptomoneda nueva_cripto;
     if (!archivo) {
         perror("Error al abrir el archivo");
-        exit(EXIT_FAILURE);
+        return -1;
     }
 
     char linea[256];
-    
+    *num_criptomonedas = 0;
 
     while (fgets(linea, sizeof(linea), archivo)) {
-        
+        // Eliminar el salto de línea al final de la línea
+        linea[strcspn(linea, "\n")] = 0; // Eliminar el salto de línea
+
+        // Parsear la línea
         sscanf(linea, "%49[^,],%9[^,],%lf,%lf,%lf,%lf",
-               nueva_cripto.nombre,
-               nueva_cripto.simbolo,
-               &nueva_cripto.precio,
-               &nueva_cripto.capacidad_mercado,
-               &nueva_cripto.volumen_24h,
-               &nueva_cripto.cambio_24h);
-        insertarComienzo(criptomonedas, sizeof(tCriptomoneda), &nueva_cripto);
+               criptomonedas[*num_criptomonedas].nombre,
+               criptomonedas[*num_criptomonedas].simbolo,
+               &criptomonedas[*num_criptomonedas].precio,
+               &criptomonedas[*num_criptomonedas].capacidad_mercado,
+               &criptomonedas[*num_criptomonedas].volumen_24h,
+               &criptomonedas[*num_criptomonedas].cambio_24h);
+
+        (*num_criptomonedas)++;
     }
 
     fclose(archivo);
+    return 0;
 }
 
-int escribir_criptomonedas_csv(const char *nombre_archivo, tLista *criptomonedas) {
+int escribir_criptomonedas_csv(const char *nombre_archivo, tCriptomoneda *criptomonedas, int* num_criptomonedas) {
     FILE *archivo = fopen(nombre_archivo, "w");
-    tCriptomoneda cripto;
     if (!archivo) {
         perror("Error al abrir el archivo para escritura");
         return -1;
     }
 
-    while(!listaVacia(criptomonedas)) {
-        sacarPrimero(criptomonedas, sizeof(tCriptomoneda), &cripto);
-        printf("Escribiendo criptomoneda: %s, Simbolo: %s, Precio: %.2f, Capacidad de mercado: %.2f, Volumen 24h: %.2f, Cambio 24h: %.2f\n",
-               cripto.nombre,
-               cripto.simbolo,
-               cripto.precio,
-               cripto.capacidad_mercado,
-               cripto.volumen_24h,
-               cripto.cambio_24h);
-        // Escribir en el archivo CSV
+    for (int i = 0; i < *num_criptomonedas; i++) {
         fprintf(archivo, "%s,%s,%.2f,%.2f,%.2f,%.2f\n",
-                cripto.nombre,
-                cripto.simbolo,
-                cripto.precio,
-                cripto.capacidad_mercado,
-                cripto.volumen_24h,
-                cripto.cambio_24h);
+                criptomonedas[i].nombre,
+                criptomonedas[i].simbolo,
+                criptomonedas[i].precio,
+                criptomonedas[i].capacidad_mercado,
+                criptomonedas[i].volumen_24h,
+                criptomonedas[i].cambio_24h);
+        printf("Criptomoneda %d: %s, Simbolo: %s, Precio: %.2f, Capacidad de Mercado: %.2f, Volumen 24h: %.2f, Cambio 24h: %.2f\n",
+               i + 1,
+               criptomonedas[i].nombre,
+               criptomonedas[i].simbolo,
+               criptomonedas[i].precio,
+               criptomonedas[i].capacidad_mercado,
+               criptomonedas[i].volumen_24h,
+               criptomonedas[i].cambio_24h);
     }
 
     fclose(archivo);
