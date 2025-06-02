@@ -4,7 +4,7 @@
 
 #define MAX_USUARIOS 100
 #define MAX_CRIPTOMONEDAS 100
-#define MAX_TRANSACCIONES 1000
+#define MAX_TRANSACCIONES 100
 // Global para guardar los PIDs de los hijos
 #define MAX_HIJOS 2000
 

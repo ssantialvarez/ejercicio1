@@ -7,6 +7,8 @@
 #include <signal.h>
 #include <semaphore.h>
 #include <sys/mman.h>
+#include <sys/stat.h>        /* For mode constants */
+#include <fcntl.h>           /* For O_* constants */
 #include "criptomoneda.h"
 #include "usuario.h"
 #include "transaccion.h"
@@ -63,7 +65,7 @@ void menu() {
     }
 }
 
-void crear_memoria_compartida(
+void crear_memoria_compartida(    
     tUsuario **usuarios, 
     tCriptomoneda **criptomonedas, 
     tTransaccionDinero **transacciones, 
@@ -71,6 +73,10 @@ void crear_memoria_compartida(
     sem_t **usuarios_mutex, 
     sem_t **console_mutex, 
     sem_t **cripto_mutex) {
+
+    int idMemoriaTransaccionesDinero = shm_open("memoriaSemaforo", O_CREAT | O_RDWR, 0600);
+    ftruncate(idMemoriaTransaccionesDinero, sizeof(tTransaccionDinero) * MAX_TRANSACCIONES); 
+
     *usuarios = (tUsuario*)_mmap(NULL, sizeof(tUsuario) * MAX_USUARIOS, PROT_READ | PROT_WRITE,
                         MAP_SHARED | MAP_ANONYMOUS, -1, 0);
     
@@ -78,7 +84,7 @@ void crear_memoria_compartida(
                         MAP_SHARED | MAP_ANONYMOUS, -1, 0);
 
     *transacciones = (tTransaccionDinero*)mmap(NULL, sizeof(tTransaccionDinero) * MAX_TRANSACCIONES, PROT_READ | PROT_WRITE,
-                        MAP_SHARED | MAP_ANONYMOUS, -1, 0);
+                        MAP_SHARED, idMemoriaTransaccionesDinero, 0);
     
     *trans_cripto = (tTransaccionCripto*)_mmap(NULL, sizeof(tTransaccionCripto) * MAX_TRANSACCIONES, PROT_READ | PROT_WRITE,
                         MAP_SHARED | MAP_ANONYMOUS, -1, 0);
@@ -91,6 +97,11 @@ void crear_memoria_compartida(
 
     *console_mutex = (sem_t*)_mmap(NULL, sizeof(sem_t), PROT_READ | PROT_WRITE,
                         MAP_SHARED | MAP_ANONYMOUS, -1, 0);
+    
+    if (close(idMemoriaTransaccionesDinero)==-1) {
+        perror("close");
+        exit(EXIT_FAILURE);
+    }
     
     sem_init(*console_mutex, MAX_TRANSACCIONES * 2, 1);
     sem_init(*cripto_mutex, MAX_TRANSACCIONES * 2, 1);

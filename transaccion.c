@@ -22,7 +22,7 @@ int leer_archivo_transaccion(const char* nombre_archivo, tTransaccionDinero* tra
     char linea[256];
     *num_transacciones = 0;
 
-    while (fgets(linea, sizeof(linea), archivo)) {
+    while ((*num_transacciones) < MAX_TRANSACCIONES && fgets(linea, sizeof(linea), archivo)) {
         // Eliminar el salto de línea al final de la línea
         linea[strcspn(linea, "\n")] = 0; // Eliminar el salto de línea
 
@@ -49,7 +49,8 @@ int leer_archivo_transaccion_cripto(const char* nombre_archivo, tTransaccionCrip
 
     char linea[256];
 
-    while (fgets(linea, sizeof(linea), archivo)) {
+    while (i < MAX_TRANSACCIONES && fgets(linea, sizeof(linea), archivo)) {
+
         // Eliminar el salto de línea al final de la línea
         linea[strcspn(linea, "\n")] = 0; // Eliminar el salto de línea
 
@@ -97,7 +98,7 @@ int ejecuta_transaccion_dinero(tTransaccionDinero* t, tUsuario* usuarios, tCript
     cuenta_origen->saldo -= t->cantidad; // Restar de la cuenta de origen
     cuenta_destino->saldo += t->cantidad; // Sumar a la cuenta de destino
     
-    //sleep(1); // Simular un pequeño retraso para la transacción
+    sleep(1); // Simular un pequeño retraso para la transacción
     sem_post(usuarios_mutex); // Liberar el mutex
     
     
@@ -162,7 +163,7 @@ int ejecuta_transaccion_cripto(tTransaccionCripto* t, tUsuario* usuarios, tCript
         cripto->precio *= 1.10; // Aumentar el precio en un 10% si las compras superan las 1000
     }
     
-    //sleep(1); // Simular un pequeño retraso para la transacción
+    sleep(1); // Simular un pequeño retraso para la transacción
     sem_post(usuarios_mutex); // Liberar el mutex
     sem_post(cripto_mutex); // Liberar el mutex de criptomonedas
     
