@@ -4,12 +4,14 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <signal.h>
 #include <semaphore.h>
 #include <sys/mman.h>
 #include "criptomoneda.h"
 #include "usuario.h"
 #include "transaccion.h"
 #include "utils.h"
+
 
 void* mem_cpy(void* dst, void* org, size_t n) {
     while(n--) {
@@ -39,21 +41,36 @@ void *_mmap(void *addr, size_t length, int prot, int flags, int fd, off_t offset
     return ptr;
 }
 
-void menu(char* ruta_archivo) {
+void menu() {
+    char caracter;
     // menu recibe ruta de archivo con registro de transacciones
     printf("===========================================\n");
     printf("SIMULACION DE CRIPTOMONEDAS Y TRANSFERENCIAS\n");
     printf("===========================================\n");
     printf("Proceso padre PID: %d\n", getpid());
     printf("Leyendo criptomonedas y cuentas...\n");
-    printf("Ingresar ruta de archivo:\n");
-    fgets(ruta_archivo, 256, stdin);
-    // Eliminar el salto de línea al final de la cadena
-    ruta_archivo[strcspn(ruta_archivo, "\n")] = 0; // Eliminar el salto de línea
-    printf("Ruta ingresada: %s\n", ruta_archivo);
+    // Ingresa Y o N para iniciar la simulación
+    printf("¿Desea iniciar la simulación? (Y/N): ");
+    scanf(" %c", &caracter);
+    if (caracter == 'Y' || caracter == 'y') {
+        printf("Iniciando simulación...\n");
+    } else if (caracter == 'N' || caracter == 'n') {
+        printf("Simulación cancelada.\n");
+        exit(0);
+    } else {
+        printf("Opción no válida. Saliendo del programa.\n");
+        exit(1);
+    }
 }
 
-void crear_memoria_compartida(tUsuario **usuarios, tCriptomoneda **criptomonedas, tTransaccionDinero **transacciones, sem_t **mutex, sem_t **console_mutex) {
+void crear_memoria_compartida(
+    tUsuario **usuarios, 
+    tCriptomoneda **criptomonedas, 
+    tTransaccionDinero **transacciones, 
+    tTransaccionCripto **trans_cripto,
+    sem_t **usuarios_mutex, 
+    sem_t **console_mutex, 
+    sem_t **cripto_mutex) {
     *usuarios = (tUsuario*)_mmap(NULL, sizeof(tUsuario) * MAX_USUARIOS, PROT_READ | PROT_WRITE,
                         MAP_SHARED | MAP_ANONYMOUS, -1, 0);
     
@@ -63,21 +80,77 @@ void crear_memoria_compartida(tUsuario **usuarios, tCriptomoneda **criptomonedas
     *transacciones = (tTransaccionDinero*)mmap(NULL, sizeof(tTransaccionDinero) * MAX_TRANSACCIONES, PROT_READ | PROT_WRITE,
                         MAP_SHARED | MAP_ANONYMOUS, -1, 0);
     
-    *mutex = (sem_t*)_mmap(NULL, sizeof(sem_t), PROT_READ | PROT_WRITE,
+    *trans_cripto = (tTransaccionCripto*)_mmap(NULL, sizeof(tTransaccionCripto) * MAX_TRANSACCIONES, PROT_READ | PROT_WRITE,
+                        MAP_SHARED | MAP_ANONYMOUS, -1, 0);
+    
+    *usuarios_mutex = (sem_t*)_mmap(NULL, sizeof(sem_t), PROT_READ | PROT_WRITE,
+                        MAP_SHARED | MAP_ANONYMOUS, -1, 0);
+
+    *cripto_mutex = (sem_t*)_mmap(NULL, sizeof(sem_t), PROT_READ | PROT_WRITE,
                         MAP_SHARED | MAP_ANONYMOUS, -1, 0);
 
     *console_mutex = (sem_t*)_mmap(NULL, sizeof(sem_t), PROT_READ | PROT_WRITE,
                         MAP_SHARED | MAP_ANONYMOUS, -1, 0);
     
-    sem_init(*console_mutex, MAX_TRANSACCIONES, 1);
-    sem_init(*mutex, MAX_TRANSACCIONES, 1);
+    sem_init(*console_mutex, MAX_TRANSACCIONES * 2, 1);
+    sem_init(*cripto_mutex, MAX_TRANSACCIONES * 2, 1);
+    sem_init(*usuarios_mutex, MAX_TRANSACCIONES * 2, 1);
 }
 
-void destruir_memoria_compartida(tUsuario *usuarios, tCriptomoneda *criptomonedas, tTransaccionDinero *transacciones, sem_t *mutex, sem_t *console_mutex) {
+void destruir_memoria_compartida(
+    tUsuario *usuarios, 
+    tCriptomoneda *criptomonedas, 
+    tTransaccionDinero *transacciones,
+    tTransaccionCripto *trans_cripto, 
+    sem_t *mutex, 
+    sem_t *console_mutex,
+    sem_t *cripto_mutex) {
     munmap(usuarios, sizeof(tUsuario) * MAX_USUARIOS);
     munmap(criptomonedas, sizeof(tCriptomoneda) * MAX_CRIPTOMONEDAS);
     munmap(mutex, sizeof(sem_t));
+    munmap(cripto_mutex, sizeof(sem_t));
     munmap(console_mutex, sizeof(sem_t));
     munmap(transacciones, sizeof(tTransaccionDinero) * MAX_TRANSACCIONES);
+    munmap(trans_cripto, sizeof(tTransaccionCripto) * MAX_TRANSACCIONES);
 }
 
+
+
+void realiza_transacciones(int num_transacciones, tTransaccionDinero *transacciones, tTransaccionCripto *trans_cripto,tUsuario *usuarios, tCriptomoneda *criptomonedas, int num_usuarios, int num_criptomonedas, sem_t *usuarios_mutex, sem_t *console_mutex, sem_t *cripto_mutex) {
+    int i, j;
+    pid_t child_pid;
+    
+    for(i = 0; i < MAX_TRANSACCIONES; i++) {
+        if ((child_pid = _fork()) == 0) {
+            printf("Ejecutando transacción %d en proceso hijo con PID %d\n", i, getpid());
+            
+            
+            if (ejecuta_transaccion_dinero(&transacciones[i], usuarios, criptomonedas, num_usuarios, num_criptomonedas, usuarios_mutex, console_mutex ) < 0) {
+                printf("Error al ejecutar la transacción %d\n", i);
+            } 
+
+            
+            exit(0); // Terminar el proceso hijo
+        } else if (child_pid < 0) {
+            perror("Error al crear el proceso hijo");
+            exit(EXIT_FAILURE);
+        }
+    }
+    
+    for(j = 0; j < MAX_TRANSACCIONES; j++) {
+        if ((child_pid = _fork()) == 0) {
+            printf("Ejecutando transacción %d en proceso hijo con PID %d\n", j, getpid());
+            
+            
+            if (ejecuta_transaccion_cripto(&trans_cripto[j], usuarios, criptomonedas, num_usuarios, num_criptomonedas, usuarios_mutex, console_mutex, cripto_mutex ) < 0) {
+                printf("Error al ejecutar la transacción %d\n", j);
+            } 
+
+            
+            exit(0); // Terminar el proceso hijo
+        } else if (child_pid < 0) {
+            perror("Error al crear el proceso hijo");
+            exit(EXIT_FAILURE);
+        }
+    }
+}

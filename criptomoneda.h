@@ -13,7 +13,7 @@ typedef struct {
 
 int leer_criptomonedas_csv(const char *nombre_archivo, tCriptomoneda *criptomonedas, int *num_criptomonedas);
 int escribir_criptomonedas_csv(const char *nombre_archivo, tCriptomoneda *criptomonedas, int *num_criptomonedas);
-
+void mostrar_criptomonedas(tCriptomoneda *criptomonedas, int num_criptomonedas);
 
 
 #endif // CRIPTOMONEDA_H_INCLUDED

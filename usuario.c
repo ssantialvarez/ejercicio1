@@ -25,6 +25,18 @@ void leer_usuarios_csv(const char *nombre_archivo, tUsuario *usuarios, int* num_
     }
 }
 
+void mostrar_usuarios(tUsuario *usuarios, int num_usuarios) {
+    printf("Lista de usuarios:\n");
+    for (int i = 0; i < num_usuarios; i++) {
+        printf("Usuario %d: %s, Cuenta: %d, Banco: %s, Saldo: %.2f\n",
+               i + 1,
+               usuarios[i].nombre,
+               usuarios[i].num_cuenta_banco,
+               usuarios[i].banco,
+               usuarios[i].saldo);
+    }
+}
+
 int escribir_usuarios_csv(const char *nombre_archivo, tUsuario *usuarios, int num_usuarios) {
     // Esta función escribe el vector de usuarios en un archivo CSV
     FILE *archivo = fopen(nombre_archivo, "w");

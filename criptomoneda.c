@@ -45,6 +45,20 @@ int leer_criptomonedas_csv(const char *nombre_archivo, tCriptomoneda *criptomone
     return 0;
 }
 
+void mostrar_criptomonedas(tCriptomoneda *criptomonedas, int num_criptomonedas){
+    printf("Lista de criptomonedas:\n");
+    for (int i = 0; i < num_criptomonedas; i++) {
+        printf("Criptomoneda %d: %s, Simbolo: %s, Precio: %.2f, Capacidad de Mercado: %.2f, Volumen 24h: %.2f, Cambio 24h: %.2f\n",
+               i + 1,
+               criptomonedas[i].nombre,
+               criptomonedas[i].simbolo,
+               criptomonedas[i].precio,
+               criptomonedas[i].capacidad_mercado,
+               criptomonedas[i].volumen_24h,
+               criptomonedas[i].cambio_24h);
+    }
+}
+
 int escribir_criptomonedas_csv(const char *nombre_archivo, tCriptomoneda *criptomonedas, int* num_criptomonedas) {
     FILE *archivo = fopen(nombre_archivo, "w");
     if (!archivo) {

@@ -10,14 +10,8 @@
 #include "usuario.h"
 #include "transaccion.h"
 #include "utils.h"
-/*
-reads this structure from a CSV file:
-typedef struct {
-    int         num_cuenta_origen;     // Source bank account number
-    int         num_cuenta_destino; // Destination bank account number
-    double      cantidad;       // Amount of money involved in the transaction
-} tTransaccionDinero;
-*/
+
+
 int leer_archivo_transaccion(const char* nombre_archivo, tTransaccionDinero* transacciones, int* num_transacciones) {
     FILE *archivo = fopen(nombre_archivo, "r");
     if (!archivo) {
@@ -45,51 +39,67 @@ int leer_archivo_transaccion(const char* nombre_archivo, tTransaccionDinero* tra
     return 0;
 }
 
-int ejecuta_transaccion_dinero(tTransaccionDinero* t, tUsuario* usuarios, tCriptomoneda* criptomonedas, int num_usuarios, int num_criptomonedas, sem_t *usuarios_mutex, sem_t *console_mutex) {
-    // Verificar si las cuentas de origen y destino existen
-    int cuenta_origen_existe = 0, cuenta_destino_existe = 0;
-
-    
-    for (int i = 0; i < num_usuarios; i++) {
-        if (usuarios[i].num_cuenta_banco == t->num_cuenta_origen) 
-            cuenta_origen_existe = 1;
-        
-        if (usuarios[i].num_cuenta_banco == t->num_cuenta_destino) 
-            cuenta_destino_existe = 1;
-        
-    }
-    
-    if (!cuenta_origen_existe || !cuenta_destino_existe) {
-        printf("Error: Una o ambas cuentas no existen.\n");
+int leer_archivo_transaccion_cripto(const char* nombre_archivo, tTransaccionCripto* transacciones, int* num_transacciones) {
+    FILE *archivo = fopen(nombre_archivo, "r");
+    int i = 0;
+    if (!archivo) {
+        perror("Error al abrir el archivo de transacciones de criptomonedas");
         return -1;
     }
 
+    char linea[256];
+
+    while (fgets(linea, sizeof(linea), archivo)) {
+        // Eliminar el salto de línea al final de la línea
+        linea[strcspn(linea, "\n")] = 0; // Eliminar el salto de línea
+
+ 
+        sscanf(linea, "%d,%9[^,],%lf",
+               &transacciones[i].num_cuenta_banco,
+               transacciones[i].simbolo,
+               &transacciones[i].cantidad
+            );
+        i++;
+    }
+    *num_transacciones += i;
+    fclose(archivo);
+    return 0;
+}
+
+int ejecuta_transaccion_dinero(tTransaccionDinero* t, tUsuario* usuarios, tCriptomoneda* criptomonedas, int num_usuarios, int num_criptomonedas, sem_t *usuarios_mutex, sem_t *console_mutex) {
+    // Verificar si las cuentas de origen y destino existen
+    tUsuario *cuenta_origen = NULL, *cuenta_destino = NULL;
+
     sem_wait(usuarios_mutex); // Bloquear el mutex para acceso exclusivo a los usuarios
-    // Verificar si la cuenta de origen tiene suficiente saldo
-    double saldo_origen = 0.0;
     for (int i = 0; i < num_usuarios; i++) {
-        if (usuarios[i].num_cuenta_banco == t->num_cuenta_origen) {
-            saldo_origen = usuarios[i].saldo;
-            break;
-        }
+        if (usuarios[i].num_cuenta_banco == t->num_cuenta_origen) 
+            cuenta_origen = &usuarios[i];
+        
+        if (usuarios[i].num_cuenta_banco == t->num_cuenta_destino) 
+            cuenta_destino = &usuarios[i];
+        
     }
     
-    if (saldo_origen < t->cantidad) {
+    if (!cuenta_destino || !cuenta_origen) {
+        printf("Error: Una o ambas cuentas no existen.\n");
+        sem_post(usuarios_mutex); // Liberar el mutex
+        return -1;
+    }
+
+    // Verificar si la cuenta de origen tiene suficiente saldo
+    if (cuenta_origen->saldo < t->cantidad) {
         printf("Error: Saldo insuficiente en la cuenta de origen.\n");
+        sem_post(usuarios_mutex); // Liberar el mutex
         return -1;
     }
     
     // Realizar la transacción
-    for (int i = 0; i < num_usuarios; i++) {
-        if (usuarios[i].num_cuenta_banco == t->num_cuenta_origen) {
-            usuarios[i].saldo -= t->cantidad; // Restar de la cuenta de origen
-        }
-        if (usuarios[i].num_cuenta_banco == t->num_cuenta_destino) {
-            usuarios[i].saldo += t->cantidad; // Sumar a la cuenta de destino
-        }
-    }
+    cuenta_origen->saldo -= t->cantidad; // Restar de la cuenta de origen
+    cuenta_destino->saldo += t->cantidad; // Sumar a la cuenta de destino
+    
+    //sleep(1); // Simular un pequeño retraso para la transacción
     sem_post(usuarios_mutex); // Liberar el mutex
-    sleep(10); // Simular un pequeño retraso para la transacción
+    
     
     sem_wait(console_mutex); // Bloquear el mutex para acceso exclusivo a la consola
     printf("Transacción exitosa: %d -> %d, Cantidad: %.2f\n",
@@ -101,3 +111,67 @@ int ejecuta_transaccion_dinero(tTransaccionDinero* t, tUsuario* usuarios, tCript
     return 0;
 }
 
+int ejecuta_transaccion_cripto(tTransaccionCripto* t, tUsuario* usuarios, tCriptomoneda* criptomonedas, int num_usuarios, int num_criptomonedas, sem_t *usuarios_mutex, sem_t *console_mutex, sem_t *cripto_mutex){
+    tUsuario *usuario = NULL;
+    tCriptomoneda *cripto = NULL;
+    double saldo_origen = 0.0, precio_cripto = 0.0;
+
+    sem_wait(usuarios_mutex); // Bloquear el mutex para acceso exclusivo a los usuarios
+    sem_wait(cripto_mutex); // Bloquear el mutex para acceso exclusivo a las criptomonedas
+    // Verificar si la cuentas de origen existe    
+    for (int i = 0; i < num_usuarios; i++){
+        if (usuarios[i].num_cuenta_banco == t->num_cuenta_banco){
+            usuario = &usuarios[i];
+            break;
+        }
+    }           
+    for(int i = 0; i < num_criptomonedas; i++) {
+        if (strcmp(criptomonedas[i].simbolo, t->simbolo) == 0) {
+            cripto = &criptomonedas[i];
+            break;
+        }
+    }
+    
+    if (!usuario || !cripto) {
+        printf("Error: Una o ambas cuentas no existen.\n");
+        sem_post(usuarios_mutex); // Liberar el mutex
+        sem_post(cripto_mutex); // Liberar el mutex
+        return -1;
+    }
+
+    if (saldo_origen < t->cantidad * precio_cripto) {
+        printf("Error: Saldo insuficiente en la cuenta de origen.\n");
+        sem_post(cripto_mutex); // Liberar el mutex
+        sem_post(usuarios_mutex); // Liberar el mutex
+        return -1;
+    }
+    
+    // Realizar la transacción
+    usuario->saldo -= t->cantidad * precio_cripto; // Restar de la cuenta de origen
+    if(cripto->capacidad_mercado - t->cantidad >= 0)
+        cripto->capacidad_mercado -= t->cantidad; // Restar de la capacidad de mercado
+    else {
+        printf("Error: Saldo insuficiente en la cuenta de origen.\n");
+        sem_post(cripto_mutex); // Liberar el mutex
+        sem_post(usuarios_mutex); // Liberar el mutex
+        return -1;
+    }
+    cripto->volumen_24h *= 1.05; // Aumentar el volumen en las últimas 24 horas
+    cripto->cambio_24h *= 1.05; // Aumentar la variación en las últimas 24 horas
+    if (cripto->capacidad_mercado < 1000) {
+        cripto->precio *= 1.10; // Aumentar el precio en un 10% si las compras superan las 1000
+    }
+    
+    //sleep(1); // Simular un pequeño retraso para la transacción
+    sem_post(usuarios_mutex); // Liberar el mutex
+    sem_post(cripto_mutex); // Liberar el mutex de criptomonedas
+    
+    sem_wait(console_mutex); // Bloquear el mutex para acceso exclusivo a la consola
+    printf("Transacción exitosa: %d -> %s, Cantidad: %.2f\n",
+           t->num_cuenta_banco, t->simbolo, t->cantidad);
+    printf("Proceso PID: %d\n", getpid());
+    printf("---------------------\n");
+    sem_post(console_mutex); // Liberar el mutex de la consola
+    
+    return 0;
+}

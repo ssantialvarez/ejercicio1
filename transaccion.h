@@ -3,8 +3,8 @@
 
 typedef struct {
     int         num_cuenta_banco;     // User ID associated with the transaction
-    char        simbolo[10];    // Cryptocurrency ID involved in the transaction
     double      cantidad;       // Amount of cryptocurrency involved in the transaction
+    char        simbolo[10];    // Cryptocurrency ID involved in the transaction
 } tTransaccionCripto;
 
 typedef struct {
@@ -19,10 +19,21 @@ int ejecuta_transaccion_dinero(
                             tCriptomoneda* criptomonedas, 
                             int num_usuarios, 
                             int num_criptomonedas, 
-                            sem_t *mutex, 
+                            sem_t *usuario_mutex, 
                             sem_t *console_mutex);
 
+int ejecuta_transaccion_cripto(
+                            tTransaccionCripto* t, 
+                            tUsuario* usuarios, 
+                            tCriptomoneda* criptomonedas, 
+                            int num_usuarios, 
+                            int num_criptomonedas, 
+                            sem_t *usuario_mutex, 
+                            sem_t *console_mutex, 
+                            sem_t *cripto_mutex);
+
 int leer_archivo_transaccion(const char* nombre_archivo, tTransaccionDinero* transacciones, int* num_transacciones);
+int leer_archivo_transaccion_cripto(const char* nombre_archivo, tTransaccionCripto* transacciones, int* num_transacciones);
 
 
 #endif // TRANSACCION_H_INCLUDED

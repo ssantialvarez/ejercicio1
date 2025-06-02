@@ -32,4 +32,4 @@ with open("src/transacciones_criptomonedas.csv", "w", encoding="utf-8") as f:
         comprador = random.choice(cuentas)
         moneda = random.choice(monedas)
         monto = round(random.uniform(0.01, 10), 2)
-        f.write(f"{comprador},{moneda},{monto:.2f}\n")
+        f.write(f"{comprador}, {moneda},{monto:.2f}\n")
