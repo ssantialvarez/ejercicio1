@@ -14,6 +14,8 @@
 #include "transaccion.h"
 #include "utils.h"
 
+#define nombreMemoria "/memoriaTransacciones"
+
 
 void* mem_cpy(void* dst, void* org, size_t n) {
     while(n--) {
@@ -43,8 +45,9 @@ void *_mmap(void *addr, size_t length, int prot, int flags, int fd, off_t offset
     return ptr;
 }
 
-void menu() {
+int menu() {
     char caracter;
+    int i = 2;
     // menu recibe ruta de archivo con registro de transacciones
     printf("===========================================\n");
     printf("SIMULACION DE CRIPTOMONEDAS Y TRANSFERENCIAS\n");
@@ -53,16 +56,18 @@ void menu() {
     printf("Leyendo criptomonedas y cuentas...\n");
     // Ingresa Y o N para iniciar la simulación
     printf("¿Desea iniciar la simulación? (Y/N): ");
+    do{
     scanf(" %c", &caracter);
     if (caracter == 'Y' || caracter == 'y') {
         printf("Iniciando simulación...\n");
+        i = 0;
     } else if (caracter == 'N' || caracter == 'n') {
         printf("Simulación cancelada.\n");
-        exit(0);
-    } else {
-        printf("Opción no válida. Saliendo del programa.\n");
-        exit(1);
+        i = 1; 
     }
+    }while(i != 0 && i != 1);
+    printf("===========================================\n");
+    return i;
 }
 
 void crear_memoria_compartida(    
@@ -74,17 +79,17 @@ void crear_memoria_compartida(
     sem_t **console_mutex, 
     sem_t **cripto_mutex) {
 
-    int idMemoriaTransaccionesDinero = shm_open("memoriaSemaforo", O_CREAT | O_RDWR, 0600);
-    ftruncate(idMemoriaTransaccionesDinero, sizeof(tTransaccionDinero) * MAX_TRANSACCIONES); 
+    int idMemoriaUsuarios = shm_open(nombreMemoria, O_CREAT | O_RDWR, 0600);
+    ftruncate(idMemoriaUsuarios, sizeof(tUsuario) * MAX_USUARIOS); 
 
     *usuarios = (tUsuario*)_mmap(NULL, sizeof(tUsuario) * MAX_USUARIOS, PROT_READ | PROT_WRITE,
-                        MAP_SHARED | MAP_ANONYMOUS, -1, 0);
+                        MAP_SHARED , idMemoriaUsuarios, 0);
     
     *criptomonedas = (tCriptomoneda*)_mmap(NULL, sizeof(tCriptomoneda) * MAX_CRIPTOMONEDAS, PROT_READ | PROT_WRITE,
                         MAP_SHARED | MAP_ANONYMOUS, -1, 0);
 
-    *transacciones = (tTransaccionDinero*)mmap(NULL, sizeof(tTransaccionDinero) * MAX_TRANSACCIONES, PROT_READ | PROT_WRITE,
-                        MAP_SHARED, idMemoriaTransaccionesDinero, 0);
+    *transacciones = (tTransaccionDinero*)_mmap(NULL, sizeof(tTransaccionDinero) * MAX_TRANSACCIONES, PROT_READ | PROT_WRITE,
+                        MAP_SHARED | MAP_ANONYMOUS, -1, 0);
     
     *trans_cripto = (tTransaccionCripto*)_mmap(NULL, sizeof(tTransaccionCripto) * MAX_TRANSACCIONES, PROT_READ | PROT_WRITE,
                         MAP_SHARED | MAP_ANONYMOUS, -1, 0);
@@ -98,7 +103,7 @@ void crear_memoria_compartida(
     *console_mutex = (sem_t*)_mmap(NULL, sizeof(sem_t), PROT_READ | PROT_WRITE,
                         MAP_SHARED | MAP_ANONYMOUS, -1, 0);
     
-    if (close(idMemoriaTransaccionesDinero)==-1) {
+    if (close(idMemoriaUsuarios)==-1) {
         perror("close");
         exit(EXIT_FAILURE);
     }
@@ -123,6 +128,7 @@ void destruir_memoria_compartida(
     munmap(console_mutex, sizeof(sem_t));
     munmap(transacciones, sizeof(tTransaccionDinero) * MAX_TRANSACCIONES);
     munmap(trans_cripto, sizeof(tTransaccionCripto) * MAX_TRANSACCIONES);
+    shm_unlink(nombreMemoria);
 }
 
 

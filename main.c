@@ -12,7 +12,7 @@
 #include "utils.h"
 
 int main(int argc, char *argv[]) {    
-    int num_usuarios = 0, num_criptomonedas = 0, num_transacciones = 0, status = 0;
+    int num_usuarios = 0, num_criptomonedas = 0, num_transacciones = 0, status = 0, end = 0;
 
     pid_t wpid;
     sem_t *console_mutex, *usuarios_mutex, *cripto_mutex;
@@ -32,12 +32,12 @@ int main(int argc, char *argv[]) {
     
     mostrar_criptomonedas(criptomonedas, num_criptomonedas);
     mostrar_usuarios(usuarios, num_usuarios);
-    menu(); 
+    end = menu(); 
+    if(end == 0) {
+        realiza_transacciones(num_transacciones, transacciones, transacciones_cripto,usuarios, criptomonedas, num_usuarios, num_criptomonedas, usuarios_mutex, console_mutex, cripto_mutex);
     
-    realiza_transacciones(num_transacciones, transacciones, transacciones_cripto,usuarios, criptomonedas, num_usuarios, num_criptomonedas, usuarios_mutex, console_mutex, cripto_mutex);
-    
-    while ((wpid = wait(&status)) > 0); // this way, the father waits for all the child processes 
-
+        while ((wpid = wait(&status)) > 0); // this way, the father waits for all the child processes 
+    }
     printf("Simulación finalizada.\n");
     printf("Proceso padre PID: %d\n", getpid());
     
