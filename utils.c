@@ -140,6 +140,8 @@ void realiza_transacciones(int num_transacciones, tTransaccionDinero *transaccio
             if (ejecuta_transaccion_dinero(&transacciones[i], usuarios, criptomonedas, num_usuarios, num_criptomonedas, usuarios_mutex, console_mutex ) < 0) {
                 printf("Error al ejecutar la transacción %d\n", i);
             }
+
+            exit(EXIT_SUCCESS);
         } else if (child_pid < 0) {
             
             perror("Error al crear el proceso hijo");
@@ -154,6 +156,7 @@ void realiza_transacciones(int num_transacciones, tTransaccionDinero *transaccio
             if (ejecuta_transaccion_cripto(&trans_cripto[j], usuarios, criptomonedas, num_usuarios, num_criptomonedas, usuarios_mutex, console_mutex, cripto_mutex ) < 0) {
                 printf("Error al ejecutar la transacción %d\n", j);
             } 
+            exit(EXIT_SUCCESS);
         } else if (child_pid < 0) {
             perror("Error al crear el proceso hijo");
             exit(EXIT_FAILURE);
