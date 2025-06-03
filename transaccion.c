@@ -98,7 +98,7 @@ int ejecuta_transaccion_dinero(tTransaccionDinero* t, tUsuario* usuarios, tCript
     cuenta_origen->saldo -= t->cantidad; // Restar de la cuenta de origen
     cuenta_destino->saldo += t->cantidad; // Sumar a la cuenta de destino
     
-    sleep(1); // Simular un pequeño retraso para la transacción
+    //sleep(2); // Simular un pequeño retraso para la transacción
     sem_post(usuarios_mutex); // Liberar el mutex
     
     
@@ -163,7 +163,7 @@ int ejecuta_transaccion_cripto(tTransaccionCripto* t, tUsuario* usuarios, tCript
         cripto->precio *= 1.10; // Aumentar el precio en un 10% si las compras superan las 1000
     }
     
-    sleep(1); // Simular un pequeño retraso para la transacción
+    //sleep(2); // Simular un pequeño retraso para la transacción
     sem_post(usuarios_mutex); // Liberar el mutex
     sem_post(cripto_mutex); // Liberar el mutex de criptomonedas
     

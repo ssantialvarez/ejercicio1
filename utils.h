@@ -5,8 +5,6 @@
 #define MAX_USUARIOS 100
 #define MAX_CRIPTOMONEDAS 100
 #define MAX_TRANSACCIONES 100
-// Global para guardar los PIDs de los hijos
-#define MAX_HIJOS 2000
 
 
 void* mem_cpy(void*, void*, size_t);
@@ -15,7 +13,7 @@ pid_t _fork();
 
 
 int menu();
-void crear_memoria_compartida(tUsuario **usuarios, tCriptomoneda **criptomonedas, tTransaccionDinero **transacciones, tTransaccionCripto **trans_cripto, sem_t **mutex, sem_t **console_mutex, sem_t **cripto_mutex);
-void destruir_memoria_compartida(tUsuario *usuarios, tCriptomoneda *criptomonedas, tTransaccionDinero *transacciones, tTransaccionCripto *trans_cripto, sem_t *mutex, sem_t *console_mutex, sem_t *cripto_mutex);
+void crear_memoria_compartida(tUsuario **usuarios, tCriptomoneda **criptomonedas, sem_t **mutex, sem_t **console_mutex, sem_t **cripto_mutex);
+void destruir_memoria_compartida(tUsuario *usuarios, tCriptomoneda *criptomonedas);
 void realiza_transacciones(int num_transacciones, tTransaccionDinero *transacciones, tTransaccionCripto *trans_cripto, tUsuario *usuarios, tCriptomoneda *criptomonedas, int num_usuarios, int num_criptomonedas, sem_t *usuarios_mutex, sem_t *console_mutex, sem_t *cripto_mutex);
 #endif // UTILS_H_INCLUDED

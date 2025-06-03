@@ -19,11 +19,11 @@ int main(int argc, char *argv[]) {
 
     tUsuario *usuarios;
     tCriptomoneda *criptomonedas;
-    tTransaccionDinero *transacciones;
-    tTransaccionCripto *transacciones_cripto;
+    tTransaccionDinero transacciones[MAX_TRANSACCIONES];
+    tTransaccionCripto transacciones_cripto[MAX_TRANSACCIONES];
 
     // Crear memoria compartida para usuarios, criptomonedas, mutex y ruta de archivo
-    crear_memoria_compartida(&usuarios, &criptomonedas, &transacciones,&transacciones_cripto, &usuarios_mutex, &console_mutex, &cripto_mutex);
+    crear_memoria_compartida(&usuarios, &criptomonedas, &usuarios_mutex, &console_mutex, &cripto_mutex);
     
     leer_criptomonedas_csv("src/criptomonedas.csv", criptomonedas, &num_criptomonedas);
     leer_usuarios_csv("src/usuarios.csv", usuarios, &num_usuarios);
@@ -45,11 +45,11 @@ int main(int argc, char *argv[]) {
     
     mostrar_criptomonedas(criptomonedas, num_criptomonedas);
     mostrar_usuarios(usuarios, num_usuarios);
-    sem_destroy(console_mutex);
-    sem_destroy(usuarios_mutex);
-    sem_destroy(cripto_mutex);
+    sem_close(console_mutex);
+    sem_close(usuarios_mutex);
+    sem_close(cripto_mutex);
     
-    destruir_memoria_compartida(usuarios, criptomonedas, transacciones, transacciones_cripto,usuarios_mutex,console_mutex, cripto_mutex);
+    destruir_memoria_compartida(usuarios, criptomonedas);
 
     return 0;
 }

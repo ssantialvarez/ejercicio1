@@ -14,7 +14,7 @@
 #include "transaccion.h"
 #include "utils.h"
 
-#define nombreMemoria "/memoriaTransacciones"
+#define nombreMemoria "/memoriaUsuarios"
 
 
 void* mem_cpy(void* dst, void* org, size_t n) {
@@ -73,8 +73,7 @@ int menu() {
 void crear_memoria_compartida(    
     tUsuario **usuarios, 
     tCriptomoneda **criptomonedas, 
-    tTransaccionDinero **transacciones, 
-    tTransaccionCripto **trans_cripto,
+
     sem_t **usuarios_mutex, 
     sem_t **console_mutex, 
     sem_t **cripto_mutex) {
@@ -87,47 +86,42 @@ void crear_memoria_compartida(
     
     *criptomonedas = (tCriptomoneda*)_mmap(NULL, sizeof(tCriptomoneda) * MAX_CRIPTOMONEDAS, PROT_READ | PROT_WRITE,
                         MAP_SHARED | MAP_ANONYMOUS, -1, 0);
-
-    *transacciones = (tTransaccionDinero*)_mmap(NULL, sizeof(tTransaccionDinero) * MAX_TRANSACCIONES, PROT_READ | PROT_WRITE,
-                        MAP_SHARED | MAP_ANONYMOUS, -1, 0);
     
-    *trans_cripto = (tTransaccionCripto*)_mmap(NULL, sizeof(tTransaccionCripto) * MAX_TRANSACCIONES, PROT_READ | PROT_WRITE,
-                        MAP_SHARED | MAP_ANONYMOUS, -1, 0);
-    
-    *usuarios_mutex = (sem_t*)_mmap(NULL, sizeof(sem_t), PROT_READ | PROT_WRITE,
-                        MAP_SHARED | MAP_ANONYMOUS, -1, 0);
+    *usuarios_mutex = sem_open("/usuarios_mutex", O_CREAT, 0666, 1);
+    if (*usuarios_mutex == SEM_FAILED) {
+        perror("sem_open");
+        exit(EXIT_FAILURE);
+    }
 
-    *cripto_mutex = (sem_t*)_mmap(NULL, sizeof(sem_t), PROT_READ | PROT_WRITE,
-                        MAP_SHARED | MAP_ANONYMOUS, -1, 0);
+    *cripto_mutex = sem_open("/cripto_mutex", O_CREAT, 0666, 1);
+    if (*cripto_mutex == SEM_FAILED) {
+        perror("sem_open");
+        exit(EXIT_FAILURE);
+    }
 
-    *console_mutex = (sem_t*)_mmap(NULL, sizeof(sem_t), PROT_READ | PROT_WRITE,
-                        MAP_SHARED | MAP_ANONYMOUS, -1, 0);
-    
+    *console_mutex = sem_open("/console_mutex", O_CREAT, 0666, 1);
+    if (*console_mutex == SEM_FAILED) {
+        perror("sem_open");
+        exit(EXIT_FAILURE);
+    }
+
     if (close(idMemoriaUsuarios)==-1) {
         perror("close");
         exit(EXIT_FAILURE);
     }
     
-    sem_init(*console_mutex, MAX_TRANSACCIONES * 2, 1);
-    sem_init(*cripto_mutex, MAX_TRANSACCIONES * 2, 1);
-    sem_init(*usuarios_mutex, MAX_TRANSACCIONES * 2, 1);
 }
 
 void destruir_memoria_compartida(
     tUsuario *usuarios, 
-    tCriptomoneda *criptomonedas, 
-    tTransaccionDinero *transacciones,
-    tTransaccionCripto *trans_cripto, 
-    sem_t *mutex, 
-    sem_t *console_mutex,
-    sem_t *cripto_mutex) {
+    tCriptomoneda *criptomonedas
+) {
     munmap(usuarios, sizeof(tUsuario) * MAX_USUARIOS);
     munmap(criptomonedas, sizeof(tCriptomoneda) * MAX_CRIPTOMONEDAS);
-    munmap(mutex, sizeof(sem_t));
-    munmap(cripto_mutex, sizeof(sem_t));
-    munmap(console_mutex, sizeof(sem_t));
-    munmap(transacciones, sizeof(tTransaccionDinero) * MAX_TRANSACCIONES);
-    munmap(trans_cripto, sizeof(tTransaccionCripto) * MAX_TRANSACCIONES);
+    sem_unlink("/usuarios_mutex");
+    sem_unlink("/cripto_mutex");
+    sem_unlink("/console_mutex");
+
     shm_unlink(nombreMemoria);
 }
 
@@ -136,19 +130,18 @@ void destruir_memoria_compartida(
 void realiza_transacciones(int num_transacciones, tTransaccionDinero *transacciones, tTransaccionCripto *trans_cripto,tUsuario *usuarios, tCriptomoneda *criptomonedas, int num_usuarios, int num_criptomonedas, sem_t *usuarios_mutex, sem_t *console_mutex, sem_t *cripto_mutex) {
     int i, j;
     pid_t child_pid;
+
+    
     
     for(i = 0; i < MAX_TRANSACCIONES; i++) {
         if ((child_pid = _fork()) == 0) {
             printf("Ejecutando transacción %d en proceso hijo con PID %d\n", i, getpid());
-            
-            
+                        
             if (ejecuta_transaccion_dinero(&transacciones[i], usuarios, criptomonedas, num_usuarios, num_criptomonedas, usuarios_mutex, console_mutex ) < 0) {
                 printf("Error al ejecutar la transacción %d\n", i);
-            } 
-
-            
-            exit(0); // Terminar el proceso hijo
+            }
         } else if (child_pid < 0) {
+            
             perror("Error al crear el proceso hijo");
             exit(EXIT_FAILURE);
         }
@@ -158,16 +151,12 @@ void realiza_transacciones(int num_transacciones, tTransaccionDinero *transaccio
         if ((child_pid = _fork()) == 0) {
             printf("Ejecutando transacción %d en proceso hijo con PID %d\n", j, getpid());
             
-            
             if (ejecuta_transaccion_cripto(&trans_cripto[j], usuarios, criptomonedas, num_usuarios, num_criptomonedas, usuarios_mutex, console_mutex, cripto_mutex ) < 0) {
                 printf("Error al ejecutar la transacción %d\n", j);
             } 
-
-            
-            exit(0); // Terminar el proceso hijo
         } else if (child_pid < 0) {
             perror("Error al crear el proceso hijo");
             exit(EXIT_FAILURE);
-        }
+        } 
     }
 }
